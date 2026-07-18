@@ -118,3 +118,28 @@ def test_run_pending_includes_converged_outbound_applications(tmp_path):
     assert processed == [application_id]
     app = get_application(conn, application_id)
     assert app[1] == "outbound"
+
+
+def test_run_pending_does_not_reprocess_already_memoed_applications(tmp_path):
+    """applications.status stays 'screened_pass' forever -- Screening has no
+    concept of "decided". Without excluding already-memoed applications,
+    every run-pending call would silently re-run (and re-bill) every
+    opportunity ever screened."""
+    conn = _conn()
+    deck = tmp_path / "deck.txt"
+    deck.write_text("x" * 500)
+    application_id = submit_application(conn, "Acme Inc", deck)
+    screen_application(conn, application_id)
+
+    p1, p2, p3 = _patched()
+    with p1, p2, p3:
+        first_run = run_pending(conn)
+        second_run = run_pending(conn)
+
+    assert first_run == [application_id]
+    assert second_run == []
+
+    memo_count = conn.execute(
+        "SELECT COUNT(*) FROM investment_memos WHERE application_id = ?", (application_id,)
+    ).fetchone()[0]
+    assert memo_count == 1

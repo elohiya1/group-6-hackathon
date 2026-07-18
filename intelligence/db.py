@@ -65,6 +65,13 @@ SELECT a.id AS application_id, a.origin, a.first_signal_at, m.generated_at AS de
        (julianday(m.generated_at) - julianday(a.first_signal_at)) * 24.0 AS hours_to_decision
 FROM applications a
 JOIN investment_memos m ON m.application_id = a.id;
+
+CREATE VIEW IF NOT EXISTS v_intelligence_pending AS
+SELECT q.application_id, q.origin, q.company_name, q.founder_entity_id, q.company_entity_id,
+       q.deck_path, q.first_signal_at, q.submitted_at
+FROM v_intelligence_queue q
+LEFT JOIN investment_memos m ON m.application_id = q.application_id
+WHERE m.application_id IS NULL;
 """
 
 

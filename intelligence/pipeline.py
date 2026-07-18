@@ -21,10 +21,14 @@ def run_intelligence(conn: sqlite3.Connection, application_id: int) -> dict:
 
 
 def run_pending(conn: sqlite3.Connection) -> List[int]:
-    """Consumes the funnel's v_intelligence_queue view -- every screened_pass
-    application is this layer's trigger condition, whether it arrived
-    inbound or converged from an outbound signal."""
-    rows = conn.execute("SELECT application_id FROM v_intelligence_queue").fetchall()
+    """Consumes v_intelligence_pending -- every screened_pass application
+    that doesn't already have a memo, whether it arrived inbound or
+    converged from an outbound signal. Excluding already-memoed
+    applications matters because applications.status stays 'screened_pass'
+    forever (Screening has no concept of "decided"); without this filter,
+    re-running this on a schedule would silently reprocess -- and re-bill --
+    every opportunity every time."""
+    rows = conn.execute("SELECT application_id FROM v_intelligence_pending").fetchall()
     processed = []
     for (application_id,) in rows:
         run_intelligence(conn, application_id)
