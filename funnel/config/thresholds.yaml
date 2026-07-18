@@ -1,0 +1,4 @@
+conviction_threshold: 65.0
+screen:
+  min_deck_bytes: 200
+  duplicate_window_days: 7
