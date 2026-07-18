@@ -115,7 +115,12 @@ def test_resolve_entity_merges_into_existing():
         "SELECT entity_id, resolution_status FROM raw_records WHERE id = ?", (rr_id,)
     ).fetchone()
     assert row == (company, "resolved")
-    assert find_entity_by_identifier(conn, "email", "grace@acme.com") == company
+    # The email identifier already belonged to `founder`, a different entity
+    # never part of this decision — add_identifier's INSERT OR IGNORE leaves
+    # it untouched rather than silently reassigning it. Identifiers only ever
+    # move between entities through an explicit, dedicated action, never as
+    # a side effect of resolving an unrelated record.
+    assert find_entity_by_identifier(conn, "email", "grace@acme.com") == founder
 
 
 def test_resolve_entity_as_new():

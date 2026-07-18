@@ -96,11 +96,6 @@ def resolve_entity(conn: sqlite3.Connection, raw_record_id: int, decision: Union
         entity_id = int(decision)
 
     for identifier_type, identifier_value in extracted:
-        # Remove identifier from any other entity that has it (UNIQUE constraint)
-        conn.execute(
-            "DELETE FROM entity_identifiers WHERE identifier_type = ? AND identifier_value = ?",
-            (identifier_type, identifier_value),
-        )
         add_identifier(conn, entity_id, identifier_type, identifier_value)
 
     conn.execute(
