@@ -1,11 +1,20 @@
 import argparse
+import json
 from pathlib import Path
 
 from .db import init_db
 from .fetchers.arxiv import fetch_arxiv
+from .fetchers.companies_house import fetch_companies_house
 from .fetchers.github import fetch_github
 from .fetchers.hackernews import fetch_show_hn
+from .fetchers.huggingface import fetch_huggingface
+from .fetchers.npm import fetch_npm
+from .fetchers.opencorporates import fetch_opencorporates
+from .fetchers.openalex import fetch_openalex
+from .fetchers.patents import fetch_patents
 from .fetchers.producthunt import fetch_producthunt
+from .fetchers.reddit import fetch_reddit
+from .fetchers.sec_edgar import fetch_sec_form_d
 from .fetchers.tavily_scrape import fetch_via_tavily
 from .ingest import run_ingestion
 
@@ -33,12 +42,73 @@ def _add_fetch_subparsers(fetch_subparsers) -> None:
     ph_parser.add_argument("--incoming", default="data/incoming")
 
     tavily_parser = fetch_subparsers.add_parser(
-        "tavily", help="Search + tag results under a source (e.g. devpost, university_challenge)"
+        "tavily",
+        help=(
+            "Search + tag results under a source with no API "
+            "(devpost, university_challenge, accelerator, ycombinator, wellfound, "
+            "indiehackers, betalist, events)"
+        ),
     )
     tavily_parser.add_argument("--source", required=True)
     tavily_parser.add_argument("--queries", nargs="+", required=True)
     tavily_parser.add_argument("--max-results", type=int, default=5)
     tavily_parser.add_argument("--incoming", default="data/incoming")
+
+    hf_parser = fetch_subparsers.add_parser("huggingface", help="Fetch Hugging Face Hub models")
+    hf_parser.add_argument("--search", required=True)
+    hf_parser.add_argument("--limit", type=int, default=20)
+    hf_parser.add_argument("--incoming", default="data/incoming")
+
+    npm_parser = fetch_subparsers.add_parser("npm", help="Fetch npm registry packages")
+    npm_parser.add_argument("--query", required=True)
+    npm_parser.add_argument("--limit", type=int, default=20)
+    npm_parser.add_argument("--incoming", default="data/incoming")
+
+    openalex_parser = fetch_subparsers.add_parser(
+        "openalex", help="Fetch recent OpenAlex works (stable author IDs)"
+    )
+    openalex_parser.add_argument("--search", required=True)
+    openalex_parser.add_argument("--max-results", type=int, default=25)
+    openalex_parser.add_argument("--incoming", default="data/incoming")
+
+    sec_parser = fetch_subparsers.add_parser(
+        "sec-edgar", help="Fetch recent SEC Form D filings (full-text search)"
+    )
+    sec_parser.add_argument("--query", default="")
+    sec_parser.add_argument("--limit", type=int, default=25)
+    sec_parser.add_argument("--contact-email", default="")
+    sec_parser.add_argument("--incoming", default="data/incoming")
+
+    reddit_parser = fetch_subparsers.add_parser(
+        "reddit", help="Fetch Reddit posts from given subreddits"
+    )
+    reddit_parser.add_argument("--subreddits", nargs="+", required=True)
+    reddit_parser.add_argument("--query", required=True)
+    reddit_parser.add_argument("--limit", type=int, default=25)
+    reddit_parser.add_argument("--incoming", default="data/incoming")
+
+    patents_parser = fetch_subparsers.add_parser(
+        "patents", help="Fetch USPTO patents via PatentsView (requires PATENTSVIEW_API_KEY)"
+    )
+    patents_parser.add_argument("--query", required=True, help="PatentsView query JSON string")
+    patents_parser.add_argument("--limit", type=int, default=25)
+    patents_parser.add_argument("--incoming", default="data/incoming")
+
+    ch_parser = fetch_subparsers.add_parser(
+        "companies-house",
+        help="Fetch UK company records (requires COMPANIES_HOUSE_API_KEY)",
+    )
+    ch_parser.add_argument("--query", required=True)
+    ch_parser.add_argument("--limit", type=int, default=25)
+    ch_parser.add_argument("--incoming", default="data/incoming")
+
+    oc_parser = fetch_subparsers.add_parser(
+        "opencorporates",
+        help="Fetch company registration records (requires OPENCORPORATES_API_KEY)",
+    )
+    oc_parser.add_argument("--query", required=True)
+    oc_parser.add_argument("--limit", type=int, default=25)
+    oc_parser.add_argument("--incoming", default="data/incoming")
 
 
 def _run_fetch(args) -> None:
@@ -55,6 +125,26 @@ def _run_fetch(args) -> None:
         paths = fetch_via_tavily(
             incoming_dir, args.source, queries=args.queries, max_results=args.max_results
         )
+    elif args.fetch_source == "huggingface":
+        paths = fetch_huggingface(incoming_dir, search=args.search, limit=args.limit)
+    elif args.fetch_source == "npm":
+        paths = fetch_npm(incoming_dir, query=args.query, limit=args.limit)
+    elif args.fetch_source == "openalex":
+        paths = fetch_openalex(incoming_dir, search=args.search, max_results=args.max_results)
+    elif args.fetch_source == "sec-edgar":
+        paths = fetch_sec_form_d(
+            incoming_dir, query=args.query, limit=args.limit, contact_email=args.contact_email
+        )
+    elif args.fetch_source == "reddit":
+        paths = fetch_reddit(
+            incoming_dir, subreddits=args.subreddits, query=args.query, limit=args.limit
+        )
+    elif args.fetch_source == "patents":
+        paths = fetch_patents(incoming_dir, query=json.loads(args.query), limit=args.limit)
+    elif args.fetch_source == "companies-house":
+        paths = fetch_companies_house(incoming_dir, query=args.query, limit=args.limit)
+    elif args.fetch_source == "opencorporates":
+        paths = fetch_opencorporates(incoming_dir, query=args.query, limit=args.limit)
     else:
         raise ValueError(f"Unknown fetch source: {args.fetch_source}")
 

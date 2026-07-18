@@ -43,6 +43,89 @@ def test_cli_fetch_tavily_invokes_fetcher_with_source(monkeypatch, capsys):
     assert kwargs["queries"] == ["site:devpost.com winners"]
 
 
+def test_cli_fetch_huggingface_invokes_fetcher(monkeypatch, capsys):
+    monkeypatch.setattr(
+        sys, "argv", ["memory_layer", "fetch", "huggingface", "--search", "ai", "--limit", "5"]
+    )
+    with patch("memory_layer.cli.fetch_huggingface", return_value=["a.json"]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["search"] == "ai"
+    assert kwargs["limit"] == 5
+
+
+def test_cli_fetch_npm_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["memory_layer", "fetch", "npm", "--query", "ai"])
+    with patch("memory_layer.cli.fetch_npm", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["query"] == "ai"
+
+
+def test_cli_fetch_openalex_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["memory_layer", "fetch", "openalex", "--search", "ai"])
+    with patch("memory_layer.cli.fetch_openalex", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["search"] == "ai"
+
+
+def test_cli_fetch_sec_edgar_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["memory_layer", "fetch", "sec-edgar", "--query", "AI", "--contact-email", "a@b.com"],
+    )
+    with patch("memory_layer.cli.fetch_sec_form_d", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["contact_email"] == "a@b.com"
+
+
+def test_cli_fetch_reddit_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["memory_layer", "fetch", "reddit", "--subreddits", "startups", "--query", "ai"],
+    )
+    with patch("memory_layer.cli.fetch_reddit", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["subreddits"] == ["startups"]
+
+
+def test_cli_fetch_patents_parses_query_json(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["memory_layer", "fetch", "patents", "--query", '{"_gte": {"patent_date": "2025-01-01"}}'],
+    )
+    with patch("memory_layer.cli.fetch_patents", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["query"] == {"_gte": {"patent_date": "2025-01-01"}}
+
+
+def test_cli_fetch_companies_house_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(
+        sys, "argv", ["memory_layer", "fetch", "companies-house", "--query", "Acme"]
+    )
+    with patch("memory_layer.cli.fetch_companies_house", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["query"] == "Acme"
+
+
+def test_cli_fetch_opencorporates_invokes_fetcher(monkeypatch):
+    monkeypatch.setattr(
+        sys, "argv", ["memory_layer", "fetch", "opencorporates", "--query", "Acme"]
+    )
+    with patch("memory_layer.cli.fetch_opencorporates", return_value=[]) as mock_fetch:
+        cli.main()
+    _, kwargs = mock_fetch.call_args
+    assert kwargs["query"] == "Acme"
+
+
 def test_cli_ingest_runs_ingestion_and_reports(tmp_path, monkeypatch, capsys):
     incoming = tmp_path / "incoming"
     (incoming / "github").mkdir(parents=True)
