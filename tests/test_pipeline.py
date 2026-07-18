@@ -33,7 +33,7 @@ def test_end_to_end_pipeline_multi_source_founder(tmp_path):
     founder_score = conn.execute(
         "SELECT coverage FROM founder_scores WHERE entity_id = ?", (entity[0],)
     ).fetchone()
-    assert founder_score[0] == "1/3"
+    assert founder_score[0] == "1/4"
 
     assert not (incoming / "github" / "repo1.json").exists()
     assert (processed / "github" / "repo1.json").exists()

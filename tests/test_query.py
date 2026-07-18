@@ -44,7 +44,7 @@ def test_get_founder_score_and_data_points():
 
     result = get_founder_score(conn, entity_id)
     assert result is not None
-    assert result[1] == "1/3"
+    assert result[1] == "1/4"
 
     data_points = get_data_points(conn, entity_id, attribute="github_stars")
     assert len(data_points) == 1

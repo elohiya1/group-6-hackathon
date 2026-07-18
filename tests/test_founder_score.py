@@ -42,7 +42,7 @@ def test_founder_score_full_coverage():
         "SELECT score, coverage FROM founder_scores WHERE entity_id = ?", (entity_id,)
     ).fetchone()
     assert row[0] == pytest.approx(score)
-    assert row[1] == "3/3"
+    assert row[1] == "3/4"
     history_count = conn.execute(
         "SELECT COUNT(*) FROM founder_score_history WHERE entity_id = ?", (entity_id,)
     ).fetchone()[0]
@@ -59,8 +59,29 @@ def test_founder_score_renormalizes_missing_categories():
     row = conn.execute(
         "SELECT score, coverage FROM founder_scores WHERE entity_id = ?", (entity_id,)
     ).fetchone()
-    assert row[1] == "1/3"
+    assert row[1] == "1/4"
     assert row[0] == pytest.approx(90.0)
+
+
+def test_founder_score_recognition_category_contributes():
+    conn = init_db(":memory:")
+    entity_id = create_entity(conn, "founder", "Hackathon Winner")
+    _insert_scored_data_point(conn, entity_id, "github", "github_stars", "500", "numeric", 0.9)
+    _insert_scored_data_point(
+        conn, entity_id, "devpost", "hackathon_placement", "1st place", "categorical", 0.8
+    )
+
+    score = compute_founder_score(conn, entity_id)
+
+    row = conn.execute(
+        "SELECT score, coverage FROM founder_scores WHERE entity_id = ?", (entity_id,)
+    ).fetchone()
+    assert row[0] == pytest.approx(score)
+    assert row[1] == "2/4"
+    expected = (0.3 * 90.0 + 0.25 * 80.0) / (0.3 + 0.25)
+    assert score == pytest.approx(expected)
+    # Score must reflect both categories, not just the github_stars-only value.
+    assert score != pytest.approx(90.0)
 
 
 def test_founder_score_history_appends_not_overwrites():
