@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*.db
+data/incoming/*/
+data/processed/*/
+!data/incoming/.gitkeep
+!data/processed/.gitkeep
