@@ -1,0 +1,8 @@
+identifiers:
+  - raw_field: author
+    identifier_type: huggingface_username
+attributes:
+  - raw_field: downloads
+    attribute_name: huggingface_downloads
+  - raw_field: likes
+    attribute_name: huggingface_likes

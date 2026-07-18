@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: inventor_name
+    identifier_type: patentsview_inventor_name
+attributes:
+  - raw_field: patents_filed
+    attribute_name: patents_filed

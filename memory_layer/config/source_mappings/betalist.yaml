@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: url
+    identifier_type: betalist_listing_url
+attributes:
+  - raw_field: title
+    attribute_name: startup_directory_listing

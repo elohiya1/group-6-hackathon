@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: cik
+    identifier_type: sec_cik
+attributes:
+  - raw_field: form_type
+    attribute_name: sec_form_d_filed

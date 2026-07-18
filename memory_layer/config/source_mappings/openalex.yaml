@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: first_author_id
+    identifier_type: openalex_author_id
+attributes:
+  - raw_field: title
+    attribute_name: research_paper_title

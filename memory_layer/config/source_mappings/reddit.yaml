@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: author
+    identifier_type: reddit_username
+attributes:
+  - raw_field: score
+    attribute_name: reddit_post_score

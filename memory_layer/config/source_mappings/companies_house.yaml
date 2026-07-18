@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: company_number
+    identifier_type: companies_house_number
+attributes:
+  - raw_field: company_status
+    attribute_name: company_registered

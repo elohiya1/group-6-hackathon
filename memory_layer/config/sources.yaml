@@ -10,3 +10,15 @@ linkedin: 0.55
 twitter: 0.5
 university_challenge: 0.5
 accelerator: 0.75
+huggingface: 0.75
+npm: 0.65
+openalex: 0.9
+sec_edgar: 0.95
+reddit: 0.5
+companies_house: 0.9
+opencorporates: 0.75
+ycombinator: 0.85
+wellfound: 0.6
+indiehackers: 0.6
+betalist: 0.55
+events: 0.55

@@ -82,3 +82,45 @@ university_program:
 accelerator_cohort:
   value_type: categorical
   temporal_behavior: static
+
+huggingface_downloads:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.05
+  recency_window_days: 30
+  half_life_days: 90
+
+huggingface_likes:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.05
+  recency_window_days: 30
+  half_life_days: 90
+
+npm_popularity_score:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.10
+  recency_window_days: 30
+  half_life_days: 90
+
+sec_form_d_filed:
+  value_type: categorical
+  temporal_behavior: static
+
+reddit_post_score:
+  value_type: numeric
+  temporal_behavior: static
+  numeric_tolerance: 0.10
+
+company_registered:
+  value_type: categorical
+  temporal_behavior: static
+
+startup_directory_listing:
+  value_type: categorical
+  temporal_behavior: static
+
+event_appearance:
+  value_type: categorical
+  temporal_behavior: static

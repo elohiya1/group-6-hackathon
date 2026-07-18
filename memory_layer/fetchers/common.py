@@ -36,17 +36,35 @@ def get_producthunt_token() -> Optional[str]:
     return os.environ.get("PRODUCTHUNT_TOKEN")
 
 
+def get_patentsview_api_key() -> Optional[str]:
+    _ensure_env_loaded()
+    return os.environ.get("PATENTSVIEW_API_KEY")
+
+
+def get_companies_house_api_key() -> Optional[str]:
+    _ensure_env_loaded()
+    return os.environ.get("COMPANIES_HOUSE_API_KEY")
+
+
+def get_opencorporates_api_key() -> Optional[str]:
+    _ensure_env_loaded()
+    return os.environ.get("OPENCORPORATES_API_KEY")
+
+
 def get_json(
     url: str,
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
+    auth: Optional[tuple] = None,
     timeout: int = 15,
     retries: int = 2,
 ) -> Dict[str, Any]:
     last_error: Optional[Exception] = None
     for attempt in range(retries + 1):
         try:
-            response = requests.get(url, params=params, headers=headers, timeout=timeout)
+            response = requests.get(
+                url, params=params, headers=headers, auth=auth, timeout=timeout
+            )
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as exc:

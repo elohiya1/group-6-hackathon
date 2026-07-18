@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: maintainer_email
+    identifier_type: email
+attributes:
+  - raw_field: popularity_score
+    attribute_name: npm_popularity_score

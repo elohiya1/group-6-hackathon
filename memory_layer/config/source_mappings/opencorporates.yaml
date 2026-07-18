@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: company_number
+    identifier_type: opencorporates_company_number
+attributes:
+  - raw_field: current_status
+    attribute_name: company_registered

@@ -5,8 +5,11 @@ import pytest
 import requests
 
 from memory_layer.fetchers.common import (
+    get_companies_house_api_key,
     get_github_token,
     get_json,
+    get_opencorporates_api_key,
+    get_patentsview_api_key,
     get_producthunt_token,
     get_tavily_api_key,
     get_text,
@@ -52,6 +55,24 @@ def test_get_producthunt_token_optional(monkeypatch):
     monkeypatch.delenv("PRODUCTHUNT_TOKEN", raising=False)
     with patch("memory_layer.fetchers.common.load_dotenv"):
         assert get_producthunt_token() is None
+
+
+def test_get_patentsview_api_key_optional(monkeypatch):
+    monkeypatch.delenv("PATENTSVIEW_API_KEY", raising=False)
+    with patch("memory_layer.fetchers.common.load_dotenv"):
+        assert get_patentsview_api_key() is None
+
+
+def test_get_companies_house_api_key_optional(monkeypatch):
+    monkeypatch.delenv("COMPANIES_HOUSE_API_KEY", raising=False)
+    with patch("memory_layer.fetchers.common.load_dotenv"):
+        assert get_companies_house_api_key() is None
+
+
+def test_get_opencorporates_api_key_optional(monkeypatch):
+    monkeypatch.delenv("OPENCORPORATES_API_KEY", raising=False)
+    with patch("memory_layer.fetchers.common.load_dotenv"):
+        assert get_opencorporates_api_key() is None
 
 
 def test_get_json_returns_parsed_body():
