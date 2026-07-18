@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: maker_username
+    identifier_type: producthunt_username
+attributes:
+  - raw_field: votes_count
+    attribute_name: producthunt_upvotes

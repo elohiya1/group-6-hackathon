@@ -49,3 +49,36 @@ patents_filed:
   value_type: numeric
   temporal_behavior: static
   numeric_tolerance: 0
+
+hn_points:
+  value_type: numeric
+  temporal_behavior: static
+  numeric_tolerance: 0.05
+
+hn_comments:
+  value_type: numeric
+  temporal_behavior: static
+  numeric_tolerance: 0.05
+
+producthunt_upvotes:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.05
+  recency_window_days: 30
+  half_life_days: 90
+
+research_paper_title:
+  value_type: text
+  temporal_behavior: static
+
+hackathon_placement:
+  value_type: categorical
+  temporal_behavior: static
+
+university_program:
+  value_type: categorical
+  temporal_behavior: static
+
+accelerator_cohort:
+  value_type: categorical
+  temporal_behavior: static

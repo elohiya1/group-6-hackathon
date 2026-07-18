@@ -1,0 +1,8 @@
+identifiers:
+  - raw_field: author
+    identifier_type: hackernews_username
+attributes:
+  - raw_field: points
+    attribute_name: hn_points
+  - raw_field: num_comments
+    attribute_name: hn_comments
