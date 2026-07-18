@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: company_domain
+    identifier_type: company_domain
+attributes:
+  - raw_field: employee_count
+    attribute_name: employee_count

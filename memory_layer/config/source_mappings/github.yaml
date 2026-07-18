@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: owner.login
+    identifier_type: github_username
+attributes:
+  - raw_field: stargazers_count
+    attribute_name: github_stars
