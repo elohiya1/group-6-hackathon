@@ -21,6 +21,7 @@ This spec covers the **Memory layer's data processing pipeline**: taking raw, pe
 - Automated outreach drafting or sending (a downstream consumer of Founder Score / Trust Score, owned elsewhere)
 - The 3-axis opportunity score (Founder / Market / Idea-vs-Market) — Person C's Intelligence layer, which takes Founder Score as *one input*, not a substitute
 - Self-reported claim extraction from unstructured pitch decks/interviews — this version scores structured data points from public sources, not deck-derived claims
+- A synthetic data generator (seeded contradictions across founder profiles) — valuable per the brief, but deferred; test fixtures for now are hand-written as needed
 
 ## 2. Data Flow
 
@@ -100,6 +101,7 @@ The untouched ingested payload.
 | source_id | FK → sources | |
 | entity_id | FK → entities, NULLABLE | null until resolved |
 | raw_payload | TEXT (JSON) | verbatim |
+| content_hash | TEXT UNIQUE | hash of raw_payload; enforces idempotent ingestion — a re-processed file is skipped rather than creating duplicate data_points that would falsely inflate corroboration |
 | origin_file | TEXT | path, for traceability |
 | ingested_at | TIMESTAMP | |
 | resolution_status | TEXT | `resolved` \| `new_entity` \| `needs_review` |
@@ -168,7 +170,15 @@ Per raw record:
 4. **No match** → create a new entity (`founder` or `company`, inferred from payload shape), register its identifiers.
 5. **Conflicting matches** (identifiers point to two different existing entities) → do not auto-merge. Set `resolution_status = needs_review`, leave `entity_id` null. Never silently merge two different people/companies.
 
-## 5. Trust Score Computation
+## 5. Attribute Normalization
+
+For corroboration/contradiction detection to work at all, two sources describing the same fact must produce the same `attribute_name` — a GitHub payload's `stargazers_count` and a Tavily-sourced mention of "1.2K stars" both need to land as the same canonical attribute.
+
+- A **fixed canonical attribute vocabulary** is defined up front (e.g. `revenue`, `user_count`, `employee_count`, `github_stars`, `job_title`, `funding_raised`).
+- Each source has its own **mapping config** (raw field name/path → canonical attribute name + `value_type` + any unit conversion). Adding a new source means adding a mapping file, not touching pipeline logic.
+- Fields with no canonical mapping are still stored on `raw_records` (nothing discarded) but are not promoted to `data_points`, so they don't silently participate in scoring under the wrong name.
+
+## 6. Trust Score Computation
 
 Computed per `(entity_id, attribute_name)` group — i.e. across every data point ever recorded for that specific claim about that specific entity.
 
@@ -186,7 +196,7 @@ Computed per `(entity_id, attribute_name)` group — i.e. across every data poin
 
 This tiering is what implements the cold-start requirement: a founder with only a GitHub profile is `insufficient_data`, not "low trust" — a materially different, honest signal.
 
-## 6. Founder Score
+## 7. Founder Score
 
 Distinct from Trust Score by design (BUILD_PLAN.md): Founder Score is per-**person**, lives in Memory, persists across ventures, never resets. Trust Score is per-**data-point**, tied to a specific claim. Founder Score is *one input* into Person C's Founder axis, not a substitute for it.
 
@@ -196,7 +206,7 @@ Distinct from Trust Score by design (BUILD_PLAN.md): Founder Score is per-**pers
 - **Missing categories are excluded and the remaining weights renormalized** — a founder with no GitHub and no patents is not scored as if those categories were zero. Alongside the score, a `coverage` value (e.g. `"2/5"`) is stored and surfaced so the investor sees how much evidence backs the number. This directly avoids re-creating the network-gated bias the brief calls out as the problem to solve.
 - **Recompute trigger:** whenever new data points land for a founder entity, the score is recalculated and a new row is appended to `founder_score_history` (never overwritten) — this is what lets the Experience layer show a trend, not just a snapshot.
 
-## 7. Interface & Consumption
+## 8. Interface & Consumption
 
 Storage is local SQLite (no live Supabase project exists for this hackathon yet). Other layers read the file directly rather than through a network service — SQLite has bindings in effectively every language.
 
@@ -205,14 +215,16 @@ To keep that stable even as the underlying schema evolves, this spec includes:
 - Read-only SQL views for common access patterns: `v_founder_scores_latest`, `v_data_points_with_confidence`, `v_contradictions_open`
 - A thin Python read module (`query.py`) exposing convenience functions: `get_founder_score(entity_id)`, `get_data_points(entity_id, attribute=None)`, etc., for other Python-based layers
 
-## 8. Testing Strategy
+## 9. Testing Strategy
 
 - **Entity resolution:** fixtures for exact match, no match (new entity created), conflicting match (flagged `needs_review`, not merged)
+- **Attribute normalization:** per-source mapping config correctly maps raw fields to canonical attributes; unmapped fields stay on `raw_records` and are never promoted to `data_points`
+- **Idempotency:** re-ingesting an identical raw file (same `content_hash`) does not create a duplicate `data_point` or inflate corroboration count
 - **Trust Score tiers:** single-source → `insufficient_data`; agreeing multi-source → `corroborated` with correct weighted score; conflicting → `contradicted` + row written to `contradictions`
 - **Founder Score:** renormalization correctness when categories are missing; `coverage` value correctness; history append-only behavior
 - **End-to-end:** a batch of synthetic multi-source raw blobs for one founder run through the full pipeline, asserting final DB state (entities, data_points with correct tiers, founder_score, coverage) matches expectations
 
-## 9. Tech Stack
+## 10. Tech Stack
 
 - **Language:** Python
 - **Storage:** local SQLite file
