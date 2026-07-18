@@ -1,5 +1,7 @@
 import sqlite3
 
+from .query import create_views
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS sources (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,4 +93,5 @@ def init_db(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA_SQL)
     conn.commit()
+    create_views(conn)
     return conn

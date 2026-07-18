@@ -1,0 +1,15 @@
+technical_execution:
+  weight: 0.3
+  attributes: [github_stars]
+
+track_record:
+  weight: 0.25
+  attributes: [patents_filed, prior_company_founded, research_paper_title]
+
+recognition:
+  weight: 0.25
+  attributes: [hackathon_placement, university_program, accelerator_cohort, producthunt_upvotes, hn_points]
+
+network:
+  weight: 0.2
+  attributes: [job_title, degree]

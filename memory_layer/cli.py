@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from .db import init_db
+from .entity_resolution import resolve_entity
 from .fetchers.arxiv import fetch_arxiv
 from .fetchers.companies_house import fetch_companies_house
 from .fetchers.github import fetch_github
@@ -16,7 +17,7 @@ from .fetchers.producthunt import fetch_producthunt
 from .fetchers.reddit import fetch_reddit
 from .fetchers.sec_edgar import fetch_sec_form_d
 from .fetchers.tavily_scrape import fetch_via_tavily
-from .ingest import run_ingestion
+from .pipeline import run_pipeline
 
 
 def _add_fetch_subparsers(fetch_subparsers) -> None:
@@ -160,11 +161,16 @@ def main() -> None:
     _add_fetch_subparsers(fetch_subparsers)
 
     ingest_parser = subparsers.add_parser(
-        "ingest", help="Ingest + resolve + normalize raw blobs from data/incoming"
+        "ingest", help="Ingest + resolve + normalize + score raw blobs from data/incoming"
     )
     ingest_parser.add_argument("--db", default="data/vc_brain.db")
     ingest_parser.add_argument("--incoming", default="data/incoming")
     ingest_parser.add_argument("--processed", default="data/processed")
+
+    resolve_parser = subparsers.add_parser("resolve", help="Manually resolve a needs_review raw_record")
+    resolve_parser.add_argument("raw_record_id", type=int)
+    resolve_parser.add_argument("decision", help='An entity_id to merge into, or "new"')
+    resolve_parser.add_argument("--db", default="data/vc_brain.db")
 
     args = parser.parse_args()
 
@@ -172,8 +178,13 @@ def main() -> None:
         _run_fetch(args)
     elif args.command == "ingest":
         conn = init_db(args.db)
-        ingested = run_ingestion(conn, Path(args.incoming), Path(args.processed))
+        ingested = run_pipeline(conn, Path(args.incoming), Path(args.processed))
         print(f"Ingested {len(ingested)} new raw record(s).")
+    elif args.command == "resolve":
+        conn = init_db(args.db)
+        decision = args.decision if args.decision == "new" else int(args.decision)
+        entity_id = resolve_entity(conn, args.raw_record_id, decision)
+        print(f"Resolved raw_record {args.raw_record_id} -> entity {entity_id}")
 
 
 if __name__ == "__main__":

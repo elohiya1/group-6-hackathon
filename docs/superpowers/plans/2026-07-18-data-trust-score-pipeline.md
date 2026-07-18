@@ -1804,7 +1804,7 @@ def _insert_scored_data_point(conn, entity_id, source_name, attribute_name, valu
         "INSERT INTO raw_records "
         "(source_id, entity_id, raw_payload, content_hash, origin_file, ingested_at, resolution_status) "
         "VALUES (?, ?, '{}', ?, 'test.json', ?, 'resolved')",
-        (source_id, entity_id, f"hash-{attribute_name}-{source_name}", now),
+        (source_id, entity_id, f"hash-{attribute_name}-{value}-{source_name}", now),
     )
     raw_record_id = cursor.lastrowid
     conn.execute(
