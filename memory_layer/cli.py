@@ -17,6 +17,7 @@ from .fetchers.producthunt import fetch_producthunt
 from .fetchers.reddit import fetch_reddit
 from .fetchers.sec_edgar import fetch_sec_form_d
 from .fetchers.tavily_scrape import fetch_via_tavily
+from .migrations import retype_companies
 from .pipeline import run_pipeline
 
 
@@ -172,6 +173,14 @@ def main() -> None:
     resolve_parser.add_argument("decision", help='An entity_id to merge into, or "new"')
     resolve_parser.add_argument("--db", default="data/vc_brain.db")
 
+    migrate_parser = subparsers.add_parser("migrate", help="Run a one-off data migration")
+    migrate_subparsers = migrate_parser.add_subparsers(dest="migration", required=True)
+    retype_parser = migrate_subparsers.add_parser(
+        "retype-companies",
+        help="Retype entities as 'company' if they carry a company identifier but are still 'founder'",
+    )
+    retype_parser.add_argument("--db", default="data/vc_brain.db")
+
     args = parser.parse_args()
 
     if args.command == "fetch":
@@ -185,6 +194,10 @@ def main() -> None:
         decision = args.decision if args.decision == "new" else int(args.decision)
         entity_id = resolve_entity(conn, args.raw_record_id, decision)
         print(f"Resolved raw_record {args.raw_record_id} -> entity {entity_id}")
+    elif args.command == "migrate" and args.migration == "retype-companies":
+        conn = init_db(args.db)
+        updated = retype_companies(conn)
+        print(f"Retyped {updated} entity(ies) to 'company'.")
 
 
 if __name__ == "__main__":

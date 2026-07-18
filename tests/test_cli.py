@@ -153,6 +153,26 @@ def test_cli_ingest_runs_pipeline_and_reports(tmp_path, monkeypatch, capsys):
     assert "Ingested 1 new raw record" in output
 
 
+def test_cli_migrate_retype_companies_reports_count(tmp_path, monkeypatch, capsys):
+    from memory_layer.db import init_db
+    from memory_layer.entities_repo import add_identifier, create_entity
+
+    db_path = tmp_path / "test.db"
+    conn = init_db(str(db_path))
+    create_entity(conn, "founder", "Acme AI Ltd")
+    entity_id = conn.execute("SELECT id FROM entities").fetchone()[0]
+    add_identifier(conn, entity_id, "companies_house_number", "12345678")
+    conn.close()
+
+    monkeypatch.setattr(
+        sys, "argv", ["memory_layer", "migrate", "retype-companies", "--db", str(db_path)]
+    )
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert "Retyped 1 entity" in output
+
+
 def test_cli_resolve_resolves_needs_review_record(tmp_path, monkeypatch, capsys):
     from datetime import datetime, timezone
 
