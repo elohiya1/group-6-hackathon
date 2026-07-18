@@ -85,3 +85,68 @@ def test_resolve_raw_record_conflicting_matches_needs_review():
         "SELECT entity_id, resolution_status FROM raw_records WHERE id = ?", (rr_id,)
     ).fetchone()
     assert row == (None, "needs_review")
+
+
+import pytest
+
+from memory_layer.entities_repo import find_entity_by_identifier
+from memory_layer.entity_resolution import resolve_entity
+
+
+def test_resolve_entity_merges_into_existing():
+    conn = init_db(":memory:")
+    company = create_entity(conn, "company", "Acme")
+    add_identifier(conn, company, "company_domain", "acme.com")
+    founder = create_entity(conn, "founder", "Grace Hopper")
+    add_identifier(conn, founder, "email", "grace@acme.com")
+    payload = {
+        "name": "Acme",
+        "company_domain": "acme.com",
+        "contact_email": "grace@acme.com",
+        "employee_count": 12,
+    }
+    rr_id = _insert_raw_record(conn, "tavily", payload, "hash-merge")
+    resolve_raw_record(conn, rr_id)  # lands in needs_review
+
+    resolved_entity_id = resolve_entity(conn, rr_id, decision=company)
+
+    assert resolved_entity_id == company
+    row = conn.execute(
+        "SELECT entity_id, resolution_status FROM raw_records WHERE id = ?", (rr_id,)
+    ).fetchone()
+    assert row == (company, "resolved")
+    assert find_entity_by_identifier(conn, "email", "grace@acme.com") == company
+
+
+def test_resolve_entity_as_new():
+    conn = init_db(":memory:")
+    company = create_entity(conn, "company", "Acme")
+    add_identifier(conn, company, "company_domain", "acme.com")
+    founder = create_entity(conn, "founder", "Grace Hopper")
+    add_identifier(conn, founder, "email", "grace@acme.com")
+    payload = {
+        "name": "Acme West",
+        "company_domain": "acme.com",
+        "contact_email": "grace@acme.com",
+        "employee_count": 12,
+    }
+    rr_id = _insert_raw_record(conn, "tavily", payload, "hash-new")
+    resolve_raw_record(conn, rr_id)
+
+    resolved_entity_id = resolve_entity(conn, rr_id, decision="new")
+
+    assert resolved_entity_id not in (company, founder)
+    row = conn.execute(
+        "SELECT entity_id, resolution_status FROM raw_records WHERE id = ?", (rr_id,)
+    ).fetchone()
+    assert row == (resolved_entity_id, "resolved")
+
+
+def test_resolve_entity_rejects_non_pending_record():
+    conn = init_db(":memory:")
+    payload = {"name": "Ada Lovelace", "owner": {"login": "ada"}, "stargazers_count": 1}
+    rr_id = _insert_raw_record(conn, "github", payload, "hash-x")
+    resolve_raw_record(conn, rr_id)  # resolves to new_entity, not needs_review
+
+    with pytest.raises(ValueError):
+        resolve_entity(conn, rr_id, decision="new")
