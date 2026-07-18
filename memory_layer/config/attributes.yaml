@@ -1,0 +1,51 @@
+revenue:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.10
+  recency_window_days: 90
+  half_life_days: 180
+
+user_count:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.10
+  recency_window_days: 90
+  half_life_days: 180
+
+employee_count:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.10
+  recency_window_days: 90
+  half_life_days: 180
+
+funding_raised:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.05
+  recency_window_days: 180
+  half_life_days: 365
+
+github_stars:
+  value_type: numeric
+  temporal_behavior: decaying
+  numeric_tolerance: 0.05
+  recency_window_days: 30
+  half_life_days: 90
+
+job_title:
+  value_type: categorical
+  temporal_behavior: static
+
+degree:
+  value_type: categorical
+  temporal_behavior: static
+
+prior_company_founded:
+  value_type: categorical
+  temporal_behavior: static
+
+patents_filed:
+  value_type: numeric
+  temporal_behavior: static
+  numeric_tolerance: 0
