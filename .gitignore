@@ -6,3 +6,7 @@ data/incoming/*/
 data/processed/*/
 !data/incoming/.gitkeep
 !data/processed/.gitkeep
+.env
+.env.*
+!.env.example
+.DS_Store

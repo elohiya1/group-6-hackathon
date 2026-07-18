@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: first_author
+    identifier_type: arxiv_author_name
+attributes:
+  - raw_field: title
+    attribute_name: research_paper_title

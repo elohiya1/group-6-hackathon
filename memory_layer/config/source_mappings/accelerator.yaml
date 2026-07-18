@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: url
+    identifier_type: accelerator_cohort_url
+attributes:
+  - raw_field: title
+    attribute_name: accelerator_cohort

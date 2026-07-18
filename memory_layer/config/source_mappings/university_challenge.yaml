@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: url
+    identifier_type: university_program_url
+attributes:
+  - raw_field: title
+    attribute_name: university_program

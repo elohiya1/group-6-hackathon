@@ -1,0 +1,6 @@
+identifiers:
+  - raw_field: url
+    identifier_type: devpost_project_url
+attributes:
+  - raw_field: title
+    attribute_name: hackathon_placement
