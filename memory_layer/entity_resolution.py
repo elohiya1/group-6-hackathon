@@ -28,9 +28,20 @@ def _extract_identifiers(payload: dict, source_name: str) -> List[Tuple[str, str
     return extracted
 
 
+COMPANY_IDENTIFIER_TYPES = {
+    "company_domain",
+    "companies_house_number",
+    "opencorporates_company_number",
+    "ycombinator_company_url",
+    "betalist_listing_url",
+    "devpost_project_url",
+    "sec_cik",
+}
+
+
 def _infer_entity_type(identifiers: List[Tuple[str, str]]) -> str:
     identifier_types = {t for t, _ in identifiers}
-    return "company" if "company_domain" in identifier_types else "founder"
+    return "company" if identifier_types & COMPANY_IDENTIFIER_TYPES else "founder"
 
 
 def resolve_raw_record(conn: sqlite3.Connection, raw_record_id: int) -> str:

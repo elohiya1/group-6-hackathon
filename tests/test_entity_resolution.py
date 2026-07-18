@@ -50,6 +50,58 @@ def test_resolve_raw_record_creates_new_company_entity():
     assert entity_type == "company"
 
 
+def test_resolve_raw_record_creates_company_for_companies_house():
+    conn = init_db(":memory:")
+    payload = {
+        "name": "Acme AI Ltd",
+        "company_number": "12345678",
+        "company_status": "active",
+    }
+    rr_id = _insert_raw_record(conn, "companies_house", payload, "hash-ch")
+
+    resolve_raw_record(conn, rr_id)
+
+    entity_id = conn.execute("SELECT entity_id FROM raw_records WHERE id = ?", (rr_id,)).fetchone()[0]
+    entity_type = conn.execute("SELECT type FROM entities WHERE id = ?", (entity_id,)).fetchone()[0]
+    assert entity_type == "company"
+
+
+def test_resolve_raw_record_creates_company_for_ycombinator():
+    conn = init_db(":memory:")
+    payload = {"name": "Acme AI (YC W26)", "url": "https://ycombinator.com/companies/acme-ai"}
+    rr_id = _insert_raw_record(conn, "ycombinator", payload, "hash-yc")
+
+    resolve_raw_record(conn, rr_id)
+
+    entity_id = conn.execute("SELECT entity_id FROM raw_records WHERE id = ?", (rr_id,)).fetchone()[0]
+    entity_type = conn.execute("SELECT type FROM entities WHERE id = ?", (entity_id,)).fetchone()[0]
+    assert entity_type == "company"
+
+
+def test_resolve_raw_record_creates_company_for_devpost():
+    conn = init_db(":memory:")
+    payload = {"name": "FounderScore", "url": "https://devpost.com/software/founderscore"}
+    rr_id = _insert_raw_record(conn, "devpost", payload, "hash-devpost")
+
+    resolve_raw_record(conn, rr_id)
+
+    entity_id = conn.execute("SELECT entity_id FROM raw_records WHERE id = ?", (rr_id,)).fetchone()[0]
+    entity_type = conn.execute("SELECT type FROM entities WHERE id = ?", (entity_id,)).fetchone()[0]
+    assert entity_type == "company"
+
+
+def test_resolve_raw_record_still_founder_for_ambiguous_program_pages():
+    conn = init_db(":memory:")
+    payload = {"name": "MIT delta v cohort", "url": "https://deltav.mit.edu/cohort"}
+    rr_id = _insert_raw_record(conn, "university_challenge", payload, "hash-univ")
+
+    resolve_raw_record(conn, rr_id)
+
+    entity_id = conn.execute("SELECT entity_id FROM raw_records WHERE id = ?", (rr_id,)).fetchone()[0]
+    entity_type = conn.execute("SELECT type FROM entities WHERE id = ?", (entity_id,)).fetchone()[0]
+    assert entity_type == "founder"
+
+
 def test_resolve_raw_record_matches_existing_entity():
     conn = init_db(":memory:")
     entity_id = create_entity(conn, "founder", "Ada Lovelace")
