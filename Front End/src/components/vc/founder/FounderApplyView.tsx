@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { client } from "@/api/client";
+import { client, ApiError } from "@/api/client";
 import { toast } from "sonner";
 
 export function FounderApplyView({ onSubmitted }: { onSubmitted: () => void }) {
@@ -18,16 +18,19 @@ export function FounderApplyView({ onSubmitted }: { onSubmitted: () => void }) {
     try {
       const op = await client.submitApplication({
         company_name: company.trim(),
-        deck_filename: deck!.name,
+        deck: deck!,
         founder_email: email.trim() || undefined,
         github_username: gh.trim() || undefined,
       });
+      client.rememberFounderApplication(op.application_id);
       toast.success(`Submitted — ${op.company_name}`);
       setCompany("");
       setDeck(null);
       setEmail("");
       setGh("");
       onSubmitted();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Failed to submit application.");
     } finally {
       setBusy(false);
     }
@@ -42,10 +45,7 @@ export function FounderApplyView({ onSubmitted }: { onSubmitted: () => void }) {
         </p>
       </header>
 
-      <form
-        onSubmit={submit}
-        className="flex flex-col gap-5 rounded-lg border bg-card p-6"
-      >
+      <form onSubmit={submit} className="flex flex-col gap-5 rounded-lg border bg-card p-6">
         <Field label="Company name" required>
           <input
             value={company}

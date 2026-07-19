@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { client, type OutboundSignal } from "@/api/client";
+import { client, ApiError, type OutboundSignal } from "@/api/client";
 import { StatusBadge } from "@/components/vc/primitives";
 import { toast } from "sonner";
 
 export function SourcingView({ onSubmitted }: { onSubmitted: () => void }) {
   const [signals, setSignals] = useState<OutboundSignal[]>([]);
+  const [signalsError, setSignalsError] = useState<string | null>(null);
   useEffect(() => {
-    client.listOutboundSignals().then(setSignals);
+    client
+      .listOutboundSignals()
+      .then(setSignals)
+      .catch((e) =>
+        setSignalsError(e instanceof ApiError ? e.message : "Failed to load outbound signals."),
+      );
   }, []);
 
   return (
@@ -18,41 +24,52 @@ export function SourcingView({ onSubmitted }: { onSubmitted: () => void }) {
             Founders surfaced from public sources, ordered by conviction.
           </p>
         </header>
-        <div className="overflow-hidden rounded-md border bg-card">
-          <table className="w-full text-xs">
-            <thead className="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">Founder</th>
-                <th className="px-3 py-2 text-left font-medium">Conviction</th>
-                <th className="px-3 py-2 text-left font-medium">Channel</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Detected</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signals
-                .slice()
-                .sort((a, b) => b.conviction_score - a.conviction_score)
-                .map((s) => (
-                  <tr key={s.id} className="border-t">
-                    <td className="px-3 py-2 font-medium">{s.founder_name}</td>
-                    <td className="px-3 py-2 tabular">
-                      {s.conviction_score.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-muted-foreground">
-                      {s.source_channel}
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge status={s.status} />
-                    </td>
-                    <td className="px-3 py-2 tabular text-[10px] text-muted-foreground">
-                      {new Date(s.detected_at).toLocaleString()}
+        {signalsError ? (
+          <div className="rounded-md border border-bear/30 bg-bear/5 p-4 text-sm text-bear">
+            {signalsError}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-md border bg-card">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Founder</th>
+                  <th className="px-3 py-2 text-left font-medium">Conviction</th>
+                  <th className="px-3 py-2 text-left font-medium">Channel</th>
+                  <th className="px-3 py-2 text-left font-medium">Status</th>
+                  <th className="px-3 py-2 text-left font-medium">Detected</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signals.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                      No outbound signals yet.
                     </td>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                )}
+                {signals
+                  .slice()
+                  .sort((a, b) => b.conviction_score - a.conviction_score)
+                  .map((s) => (
+                    <tr key={s.id} className="border-t">
+                      <td className="px-3 py-2 font-medium">{s.founder_name}</td>
+                      <td className="px-3 py-2 tabular">{s.conviction_score.toFixed(2)}</td>
+                      <td className="px-3 py-2 font-mono text-muted-foreground">
+                        {s.source_channel}
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusBadge status={s.status} />
+                      </td>
+                      <td className="px-3 py-2 tabular text-[10px] text-muted-foreground">
+                        {new Date(s.detected_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section>
@@ -78,31 +95,28 @@ function InboundForm({ onSubmitted }: { onSubmitted: () => void }) {
     try {
       const newOp = await client.submitApplication({
         company_name: company.trim(),
-        deck_filename: deck!.name,
+        deck: deck!,
         founder_email: email.trim() || undefined,
         github_username: gh.trim() || undefined,
       });
-      toast.success(`Submitted — ${newOp.company_name} is now in pipeline as submitted`);
+      toast.success(`Submitted — ${newOp.company_name} is now in pipeline as ${newOp.status}`);
       setCompany("");
       setDeck(null);
       setEmail("");
       setGh("");
       onSubmitted();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Failed to submit application.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="flex flex-col gap-4 rounded-md border bg-card p-5"
-    >
+    <form onSubmit={submit} className="flex flex-col gap-4 rounded-md border bg-card p-5">
       <header>
         <h2 className="text-lg font-semibold tracking-tight">Inbound application</h2>
-        <p className="text-xs text-muted-foreground">
-          Deck + company name is all we need.
-        </p>
+        <p className="text-xs text-muted-foreground">Deck + company name is all we need.</p>
       </header>
 
       <Field label="Company name" required>

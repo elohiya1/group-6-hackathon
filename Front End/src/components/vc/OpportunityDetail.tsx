@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   client,
+  ApiError,
   type AxisScore,
   type Contradiction,
   type DataPoint,
@@ -18,33 +19,31 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useCountUp } from "@/hooks/use-count-up";
 
-
-export function OpportunityDetail({
-  id,
-  onBack,
-}: {
-  id: number;
-  onBack: () => void;
-}) {
+export function OpportunityDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [op, setOp] = useState<Opportunity | null>(null);
-  const [tab, setTab] = useState<"memo" | "evidence" | "flags" | "adversarial">(
-    "memo",
-  );
+  const [tab, setTab] = useState<"memo" | "evidence" | "flags" | "adversarial">("memo");
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    client.getOpportunity(id).then((o) => {
-      setOp(o);
-      setLoading(false);
-    });
+    setError(null);
+    client
+      .getOpportunity(id)
+      .then((o) => {
+        setOp(o);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e instanceof ApiError ? e.message : "Failed to load this opportunity.");
+        setLoading(false);
+      });
   }, [id]);
 
-  if (loading)
-    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
-  if (!op)
-    return <div className="p-8 text-sm text-muted-foreground">Not found.</div>;
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (error) return <div className="p-8 text-sm text-bear">{error}</div>;
+  if (!op) return <div className="p-8 text-sm text-muted-foreground">Not found.</div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,9 +63,7 @@ export function OpportunityDetail({
               <OriginBadge origin={op.origin} />
               <StatusBadge status={op.status} />
             </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              {op.company_name}
-            </h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{op.company_name}</h1>
             <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
               <span>
                 {op.founder ? (
@@ -75,9 +72,7 @@ export function OpportunityDetail({
                   <span className="text-flag">Unresolved founder</span>
                 )}
               </span>
-              {op.thesis_fit && (
-                <InThesisBadge inThesis={op.thesis_fit.in_thesis} />
-              )}
+              {op.thesis_fit && <InThesisBadge inThesis={op.thesis_fit.in_thesis} />}
             </div>
           </div>
 
@@ -93,9 +88,7 @@ export function OpportunityDetail({
                 </span>
               </div>
 
-              <p className="text-sm leading-snug text-foreground">
-                {op.recommendation.rationale}
-              </p>
+              <p className="text-sm leading-snug text-foreground">{op.recommendation.rationale}</p>
               <p className="mt-2 text-[11px] text-muted-foreground">
                 <span className="uppercase tracking-wide">Derivation: </span>
                 {op.recommendation.derivation}
@@ -115,8 +108,7 @@ export function OpportunityDetail({
 
         {op.founder && op.founder.founder_score === null && (
           <div className="rounded-sm border border-dashed border-flag/40 bg-flag-bg px-3 py-2 text-xs text-flag">
-            No track record on file. Scored from public footprint with reduced
-            confidence.
+            No track record on file. Scored from public footprint with reduced confidence.
           </div>
         )}
       </header>
@@ -164,12 +156,9 @@ export function OpportunityDetail({
               founderName={op.founder?.canonical_name ?? null}
             />
           )}
-          {tab === "flags" && (
-            <FlagsTab contradictions={op.founder?.contradictions ?? []} />
-          )}
+          {tab === "flags" && <FlagsTab contradictions={op.founder?.contradictions ?? []} />}
           {tab === "adversarial" && <AdversarialTab op={op} />}
         </div>
-
       </div>
 
       {/* Decision trace */}
@@ -180,11 +169,7 @@ export function OpportunityDetail({
 
 function AxisCard({ axis }: { axis: AxisScore }) {
   const label =
-    axis.axis === "founder"
-      ? "Founder"
-      : axis.axis === "market"
-        ? "Market"
-        : "Idea × Market";
+    axis.axis === "founder" ? "Founder" : axis.axis === "market" ? "Market" : "Idea × Market";
   const color =
     axis.rating === "bullish"
       ? "text-bullish"
@@ -195,29 +180,17 @@ function AxisCard({ axis }: { axis: AxisScore }) {
   return (
     <div className="rounded-md border bg-card p-4 transition-transform duration-[120ms] hover:-translate-y-px hover:border-foreground/25">
       <div className="flex items-baseline justify-between">
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          {label}
-        </span>
-        <AxisChip
-          label={label[0]}
-          score={axis.score}
-          rating={axis.rating}
-          trend={axis.trend}
-        />
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+        <AxisChip label={label[0]} score={axis.score} rating={axis.rating} trend={axis.trend} />
       </div>
-      <div className={`mt-2 tabular text-3xl font-semibold ${color}`}>
-        {Math.round(animated)}
-      </div>
+      <div className={`mt-2 tabular text-3xl font-semibold ${color}`}>{Math.round(animated)}</div>
       <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
         {axis.rating} · {axis.trend}
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-foreground/80">
-        {axis.rationale}
-      </p>
+      <p className="mt-3 text-xs leading-relaxed text-foreground/80">{axis.rationale}</p>
     </div>
   );
 }
-
 
 function MemoTab({ op }: { op: Opportunity }) {
   if (!op.memo)
@@ -317,13 +290,7 @@ function SwotCell({
   );
 }
 
-function EvidenceTab({
-  points,
-  founderName,
-}: {
-  points: DataPoint[];
-  founderName: string | null;
-}) {
+function EvidenceTab({ points, founderName }: { points: DataPoint[]; founderName: string | null }) {
   const grouped = useMemo(() => {
     const g = new Map<string, DataPoint[]>();
     points.forEach((p) => {
@@ -363,25 +330,19 @@ function EvidenceTab({
                 <tr key={r.id} className="border-t first:border-t-0">
                   <td className="px-4 py-2 font-medium">{r.value}</td>
                   <td className="px-4 py-2">
-                    <span className="font-mono text-muted-foreground">
-                      {r.source_name}
-                    </span>
+                    <span className="font-mono text-muted-foreground">{r.source_name}</span>
                     <span className="ml-2 inline-flex rounded-sm border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
                       weight {r.source_reliability.toFixed(2)}
                     </span>
                   </td>
                   <td className="px-4 py-2 tabular text-muted-foreground">
-                    {r.confidence_score !== null
-                      ? r.confidence_score.toFixed(2)
-                      : "—"}
+                    {r.confidence_score !== null ? r.confidence_score.toFixed(2) : "—"}
                   </td>
                   <td className="px-4 py-2">
                     <ConfidenceTierBadge tier={r.confidence_tier} />
                   </td>
                   <td className="px-4 py-2 text-right tabular text-[10px] text-muted-foreground">
-                    {r.observed_at
-                      ? new Date(r.observed_at).toLocaleDateString()
-                      : "—"}
+                    {r.observed_at ? new Date(r.observed_at).toLocaleDateString() : "—"}
                   </td>
                 </tr>
               ))}
@@ -468,20 +429,14 @@ function DecisionTrace({ op }: { op: Opportunity }) {
                   s.done ? "bg-primary" : "border border-dashed border-muted-foreground"
                 }`}
               />
-              {i < steps.length - 1 && (
-                <div className="mt-1 h-8 w-px bg-border" />
-              )}
+              {i < steps.length - 1 && <div className="mt-1 h-8 w-px bg-border" />}
             </div>
             <div className="flex-1">
               <div className="text-xs font-medium">{s.label}</div>
               <div className="text-[10px] tabular text-muted-foreground">
                 {s.at ? new Date(s.at).toLocaleString() : "pending"}
               </div>
-              {s.delta && (
-                <div className="mt-0.5 text-[10px] text-primary tabular">
-                  +{s.delta}
-                </div>
-              )}
+              {s.delta && <div className="mt-0.5 text-[10px] text-primary tabular">+{s.delta}</div>}
             </div>
           </div>
         ))}
@@ -505,7 +460,6 @@ function HoursCounter({ hours }: { hours: number | null }) {
   );
 }
 
-
 function AdversarialTab({ op }: { op: Opportunity }) {
   if (!op.axes || !op.memo) {
     return (
@@ -517,9 +471,7 @@ function AdversarialTab({ op }: { op: Opportunity }) {
 
   const bearAxes = op.axes.filter((a) => a.rating === "bear");
   const focusAxes =
-    bearAxes.length > 0
-      ? bearAxes
-      : [op.axes.slice().sort((a, b) => a.score - b.score)[0]];
+    bearAxes.length > 0 ? bearAxes : [op.axes.slice().sort((a, b) => a.score - b.score)[0]];
 
   const contradictions = op.founder?.contradictions ?? [];
   const gaps = op.memo.gaps_flagged;
@@ -588,10 +540,8 @@ function AdversarialTab({ op }: { op: Opportunity }) {
           <ul className="mt-2 flex flex-col gap-1.5 text-sm leading-relaxed">
             {contradictions.map((c) => (
               <li key={c.id}>
-                <span className="font-mono text-xs text-bear">
-                  {c.attribute_name}
-                </span>{" "}
-                — {c.description}
+                <span className="font-mono text-xs text-bear">{c.attribute_name}</span> —{" "}
+                {c.description}
               </li>
             ))}
           </ul>
@@ -617,4 +567,3 @@ function AdversarialTab({ op }: { op: Opportunity }) {
     </div>
   );
 }
-

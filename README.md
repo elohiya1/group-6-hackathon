@@ -201,19 +201,101 @@ No dedicated dataset is provided. We bring/synthesise our own:
 
 ## 🚀 Getting Started
 
+The repo has two halves: this directory is the **backend** (Python/FastAPI +
+SQLite), and `Front End/` is the **frontend** (TanStack Start / React, built
+in Lovable). They run as two separate local servers and talk over HTTP.
+
+```
+Backend  (this dir)  → http://localhost:8000   (FastAPI, uvicorn)
+Frontend (Front End/) → http://localhost:8080   (Vite dev server)
+```
+
+### 1. Install dependencies
+
 ```bash
-# Clone the repo
-git clone <repo-url>
-cd vc-brain
+# Backend — from the repo root
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
-# Install dependencies
-# (add setup instructions here)
+# Frontend
+cd "Front End"
+npm install                      # or bun install, if you have bun
+cd ..
+```
 
-# Configure environment — API keys for:
-#   TAVILY_API_KEY, GITHUB_TOKEN, ...
+### 2. Configure environment variables
 
-# Run
-# (add run command here)
+```bash
+# Backend: copy and fill in at least OPENAI_API_KEY
+cp .env.example .env
+
+# Frontend: defaults already point at the backend on :8000, override if needed
+cp "Front End/.env.example" "Front End/.env"
+```
+
+Backend `.env` keys:
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | Yes, for Intelligence | Thesis fit, 3-axis scoring, and memo generation call OpenAI (`gpt-4.1-mini`). Without it, applications still get created and screened, but axes/memo stay unset ("not yet analyzed") instead of erroring. |
+| `TAVILY_API_KEY`, `GITHUB_TOKEN`, `PRODUCTHUNT_TOKEN`, `PATENTSVIEW_API_KEY`, `COMPANIES_HOUSE_API_KEY`, `OPENCORPORATES_API_KEY` | No | Only used by the `memory_layer fetch` CLI commands that pull outbound sourcing signals — not required to run the API/frontend. |
+| `VC_BRAIN_DB_PATH` | No (default `data/vc_brain.db`) | SQLite file the API reads/writes. |
+| `CORS_ORIGINS` | No | Extra comma-separated origins allowed to call the API, beyond the default localhost dev ports (3000/5173/4173/8080). |
+
+Frontend `Front End/.env`:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_API_BASE_URL` | Base URL of the FastAPI backend. Defaults to `http://localhost:8000`. Never hardcode the backend URL in a component — always read it through `src/api/client.ts`. |
+
+### 3. Start the backend
+
+```bash
+source .venv/bin/activate
+uvicorn api.main:app --reload --port 8000
+```
+
+Interactive API docs: http://localhost:8000/docs
+
+### 4. Start the frontend
+
+```bash
+cd "Front End"
+npm run dev
+```
+
+Vite prints the local URL (default `http://localhost:8080`) — open it in a
+browser. Pick either role from the entry screen (there are no accounts).
+
+### 5. Verify the connection
+
+```bash
+curl http://localhost:8000/api/health          # {"ok":true}
+curl http://localhost:8000/api/opportunities   # [] on a fresh DB
+```
+
+With both servers running, open the frontend and go to **Pipeline** — a
+"No opportunities match these filters." empty state (not an infinite
+"Loading…" or a red error banner) confirms the frontend successfully reached
+the backend. Submitting an application from **Sourcing** (investor) or
+**Apply** (founder role) exercises the full round trip: file upload → intake
+→ screen → (if it passes and `OPENAI_API_KEY` is set) thesis fit + 3-axis
+scoring + memo generation, all visible back in Pipeline within a few
+seconds.
+
+### Running tests
+
+```bash
+# Backend unit tests
+source .venv/bin/activate
+pytest
+
+# Frontend type check, lint, build
+cd "Front End"
+npx tsc --noEmit
+npm run lint
+npm run build
 ```
 
 ## 🧭 Scope

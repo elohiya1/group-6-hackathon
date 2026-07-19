@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { client, type Founder, type CategoryCoverage } from "@/api/client";
+import { client, ApiError, type Founder, type CategoryCoverage } from "@/api/client";
 import { ConfidenceTierBadge, Sparkline } from "@/components/vc/primitives";
 import { useCountUp } from "@/hooks/use-count-up";
-
 
 const CATEGORY_LABELS: Record<CategoryCoverage["category"], string> = {
   technical_execution: "Technical execution",
@@ -23,14 +22,28 @@ const CATEGORY_HINTS: Record<CategoryCoverage["category"], string> = {
 };
 
 export function FounderProfileView() {
-  const [founder, setFounder] = useState<Founder | null>(null);
+  // undefined = still loading, null = loaded but no application on file yet.
+  const [founder, setFounder] = useState<Founder | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    client.getFounderPortal().then((r) => setFounder(r.founder));
+    client
+      .getFounderPortal()
+      .then((r) => setFounder(r.founder))
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load your profile."));
   }, []);
 
-  if (!founder)
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (error) return <div className="text-sm text-bear">{error}</div>;
+  if (founder === undefined) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (founder === null)
+    return (
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">My profile</h1>
+        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+          No application on file yet. Submit one from Apply to build your profile.
+        </div>
+      </div>
+    );
 
   const missing = founder.category_coverage.filter((c) => !c.has_data);
   const scoreHistory = founder.score_history.map((p) => p.score);
@@ -53,7 +66,6 @@ export function FounderProfileView() {
             <div className="mt-1 text-xs text-muted-foreground">
               Coverage {founder.founder_score?.coverage ?? "0/4"}
             </div>
-
           </div>
           <div className="pb-2">
             <Sparkline points={scoreHistory} width={160} height={44} />
@@ -73,9 +85,7 @@ export function FounderProfileView() {
               }`}
             >
               <div>
-                <div className="text-sm font-medium">
-                  {CATEGORY_LABELS[c.category]}
-                </div>
+                <div className="text-sm font-medium">{CATEGORY_LABELS[c.category]}</div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
                   {c.attribute_names.length > 0
                     ? c.attribute_names.join(", ")
@@ -103,12 +113,9 @@ export function FounderProfileView() {
 
       {/* Evidence */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-tight">
-          What the fund sees
-        </h2>
+        <h2 className="text-sm font-semibold tracking-tight">What the fund sees</h2>
         <p className="text-xs text-muted-foreground">
-          Every data point currently attached to your profile, with source and
-          confidence.
+          Every data point currently attached to your profile, with source and confidence.
         </p>
         <div className="overflow-hidden rounded-lg border bg-card">
           <table className="w-full text-sm">
@@ -143,9 +150,7 @@ export function FounderProfileView() {
       {/* Grow your score */}
       {missing.length > 0 && (
         <section className="rounded-lg border border-primary/30 bg-primary/5 p-6">
-          <h2 className="text-sm font-semibold tracking-tight text-primary">
-            Grow your score
-          </h2>
+          <h2 className="text-sm font-semibold tracking-tight text-primary">Grow your score</h2>
           <ul className="mt-3 flex flex-col gap-2 text-sm leading-relaxed">
             {missing.map((c) => (
               <li key={c.category} className="text-foreground">
@@ -167,4 +172,3 @@ function FounderScoreNumber({ score }: { score: number | null }) {
     </div>
   );
 }
-

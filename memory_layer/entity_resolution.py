@@ -82,6 +82,31 @@ def resolve_raw_record(conn: sqlite3.Connection, raw_record_id: int) -> str:
     return status
 
 
+def find_candidate_entities(
+    conn: sqlite3.Connection, raw_record_id: int
+) -> List[Tuple[int, str, str]]:
+    """Read-only counterpart to resolve_raw_record's matching step, for
+    surfacing a needs_review record's candidates to a human reviewer without
+    mutating anything. Returns (entity_id, canonical_name, matched_identifier)
+    for every entity that shares at least one extracted identifier with this
+    raw record."""
+    payload, source_name = _load_payload_and_source(conn, raw_record_id)
+    extracted = _extract_identifiers(payload, source_name)
+
+    candidates: List[Tuple[int, str, str]] = []
+    seen_entity_ids = set()
+    for identifier_type, identifier_value in extracted:
+        entity_id = find_entity_by_identifier(conn, identifier_type, identifier_value)
+        if entity_id is None or entity_id in seen_entity_ids:
+            continue
+        seen_entity_ids.add(entity_id)
+        canonical_name = conn.execute(
+            "SELECT canonical_name FROM entities WHERE id = ?", (entity_id,)
+        ).fetchone()[0]
+        candidates.append((entity_id, canonical_name, f"{identifier_type}: {identifier_value}"))
+    return candidates
+
+
 def resolve_entity(conn: sqlite3.Connection, raw_record_id: int, decision: Union[int, str]) -> int:
     """Manually resolve a needs_review raw_record.
 

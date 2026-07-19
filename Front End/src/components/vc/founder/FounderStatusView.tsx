@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { client, type Opportunity } from "@/api/client";
+import { client, ApiError, type Opportunity } from "@/api/client";
 import { Check } from "lucide-react";
 import founderBanner from "@/assets/founder-banner.png.asset.json";
-
 
 type StepKey = "submitted" | "screened" | "under_analysis" | "decision";
 type StepState = { key: StepKey; label: string; at: string | null; current: boolean };
 
 export function FounderStatusView() {
   const [op, setOp] = useState<Opportunity | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    client.getFounderPortal().then((r) => setOp(r.opportunity));
+    client
+      .getFounderPortal()
+      .then((r) => setOp(r.opportunity))
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load your status."));
   }, []);
 
-  if (op === undefined)
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (error) return <div className="text-sm text-bear">{error}</div>;
+  if (op === undefined) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   if (op === null)
     return (
@@ -33,10 +36,7 @@ export function FounderStatusView() {
     <div className="flex flex-col gap-8">
       {/* Banner strip — puzzle-assembly collage screened back strongly so its
           red and green cannot be read as status colors next to the tracker. */}
-      <div
-        aria-hidden
-        className="relative -mx-8 -mt-10 mb-2 h-[110px] overflow-hidden border-b"
-      >
+      <div aria-hidden className="relative -mx-8 -mt-10 mb-2 h-[110px] overflow-hidden border-b">
         <div
           className="absolute inset-0 bg-cover bg-[position:center_45%] bg-no-repeat"
           style={{ backgroundImage: `url(${founderBanner.url})` }}
@@ -44,8 +44,7 @@ export function FounderStatusView() {
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "color-mix(in oklab, var(--bg-paper) 88%, transparent)",
+            background: "color-mix(in oklab, var(--bg-paper) 88%, transparent)",
           }}
         />
       </div>
@@ -56,7 +55,6 @@ export function FounderStatusView() {
           {op.company_name} · submitted {new Date(op.submitted_at).toLocaleString()}
         </p>
       </header>
-
 
       <Countdown submittedAt={op.submitted_at} hasDecision={!!op.recommendation} />
 
@@ -142,17 +140,8 @@ function StepRow({ step, last }: { step: StepState; last: boolean }) {
   );
 }
 
-function Countdown({
-  submittedAt,
-  hasDecision,
-}: {
-  submittedAt: string;
-  hasDecision: boolean;
-}) {
-  const deadline = useMemo(
-    () => new Date(submittedAt).getTime() + 24 * 3600 * 1000,
-    [submittedAt],
-  );
+function Countdown({ submittedAt, hasDecision }: { submittedAt: string; hasDecision: boolean }) {
+  const deadline = useMemo(() => new Date(submittedAt).getTime() + 24 * 3600 * 1000, [submittedAt]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (hasDecision) return;
@@ -187,16 +176,12 @@ function DecisionPanel({ op }: { op: Opportunity }) {
   if (rec.verdict === "invest") {
     return (
       <div className="rounded-lg border border-bullish/40 bg-bullish/5 p-6">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-bullish">
-          Decision
-        </div>
+        <div className="text-[10px] uppercase tracking-[0.18em] text-bullish">Decision</div>
         <h2 className="mt-1 text-3xl font-semibold tracking-tight text-bullish">
           You're funded: $100K
         </h2>
         {op.memo && (
-          <p className="mt-4 text-sm leading-relaxed text-foreground">
-            {op.memo.company_snapshot}
-          </p>
+          <p className="mt-4 text-sm leading-relaxed text-foreground">{op.memo.company_snapshot}</p>
         )}
       </div>
     );
@@ -204,26 +189,18 @@ function DecisionPanel({ op }: { op: Opportunity }) {
   if (rec.verdict === "needs_review") {
     return (
       <div className="rounded-lg border border-flag/40 bg-flag-bg p-6">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-flag">
-          Decision
-        </div>
-        <h2 className="mt-1 text-3xl font-semibold tracking-tight text-flag">
-          In final review
-        </h2>
+        <div className="text-[10px] uppercase tracking-[0.18em] text-flag">Decision</div>
+        <h2 className="mt-1 text-3xl font-semibold tracking-tight text-flag">In final review</h2>
       </div>
     );
   }
   return (
     <div className="rounded-lg border bg-card p-6">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        Decision
-      </div>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-        Not this time.
-      </h2>
+      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Decision</div>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Not this time.</h2>
       <p className="mt-3 text-sm leading-relaxed text-foreground">
-        Your Founder Score persists. Ship again and your next application starts from
-        a stronger position.
+        Your Founder Score persists. Ship again and your next application starts from a stronger
+        position.
       </p>
     </div>
   );

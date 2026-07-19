@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   client,
+  ApiError,
   type CategoryCoverage,
   type Company,
   type Entity,
@@ -29,10 +30,13 @@ export function MemoryView() {
   const [openFounder, setOpenFounder] = useState<Founder | null>(null);
   const [openCompany, setOpenCompany] = useState<Company | null>(null);
   const [query, setQuery] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    client.listNeedsReview().then(setRecords);
-    client.listEntities().then(setEntities);
+    const onError = (e: unknown) =>
+      setLoadError(e instanceof ApiError ? e.message : "Failed to load memory data.");
+    client.listNeedsReview().then(setRecords).catch(onError);
+    client.listEntities().then(setEntities).catch(onError);
   }, []);
 
   const filtered = useMemo(() => {
@@ -40,9 +44,7 @@ export function MemoryView() {
     if (!q) return entities;
     return entities.filter((e) => {
       if (e.canonical_name.toLowerCase().includes(q)) return true;
-      return e.identifiers.some((i) =>
-        `${i.type} ${i.value}`.toLowerCase().includes(q),
-      );
+      return e.identifiers.some((i) => `${i.type} ${i.value}`.toLowerCase().includes(q));
     });
   }, [entities, query]);
 
@@ -50,7 +52,12 @@ export function MemoryView() {
     r: NeedsReviewRecord,
     decision: { type: "merge"; entity_id: number } | { type: "create_new" },
   ) {
-    await client.resolveRecord(r.raw_record_id, decision);
+    try {
+      await client.resolveRecord(r.raw_record_id, decision);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Failed to resolve this record.");
+      return;
+    }
     // Trigger fade-and-collapse before removing from the list.
     setRemoving((s) => new Set(s).add(r.raw_record_id));
     toast.success("Resolved, data points extracted and scores recomputed");
@@ -62,11 +69,19 @@ export function MemoryView() {
         return n;
       });
     }, 200);
+    client
+      .listEntities()
+      .then(setEntities)
+      .catch(() => {});
   }
-
 
   return (
     <div className="flex flex-col gap-8">
+      {loadError && (
+        <div className="rounded-md border border-bear/30 bg-bear/5 p-4 text-sm text-bear">
+          {loadError}
+        </div>
+      )}
       <section>
         <header className="mb-3">
           <h1 className="text-lg font-semibold tracking-tight">Needs review</h1>
@@ -87,7 +102,6 @@ export function MemoryView() {
                 removing.has(r.raw_record_id) ? "motion-collapse" : ""
               }`}
             >
-
               <div className="mb-3 flex items-baseline justify-between">
                 <div>
                   <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -166,27 +180,16 @@ export function MemoryView() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-3 py-6 text-center text-muted-foreground"
-                  >
+                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
                     No entities match
                   </td>
                 </tr>
               )}
               {filtered.map((e) =>
                 e.type === "founder" ? (
-                  <FounderRow
-                    key={`f-${e.entity_id}`}
-                    f={e}
-                    onOpen={() => setOpenFounder(e)}
-                  />
+                  <FounderRow key={`f-${e.entity_id}`} f={e} onOpen={() => setOpenFounder(e)} />
                 ) : (
-                  <CompanyRow
-                    key={`c-${e.entity_id}`}
-                    c={e}
-                    onOpen={() => setOpenCompany(e)}
-                  />
+                  <CompanyRow key={`c-${e.entity_id}`} c={e} onOpen={() => setOpenCompany(e)} />
                 ),
               )}
             </tbody>
@@ -194,12 +197,8 @@ export function MemoryView() {
         </div>
       </section>
 
-      {openFounder && (
-        <FounderPanel founder={openFounder} onClose={() => setOpenFounder(null)} />
-      )}
-      {openCompany && (
-        <CompanyPanel company={openCompany} onClose={() => setOpenCompany(null)} />
-      )}
+      {openFounder && <FounderPanel founder={openFounder} onClose={() => setOpenFounder(null)} />}
+      {openCompany && <CompanyPanel company={openCompany} onClose={() => setOpenCompany(null)} />}
     </div>
   );
 }
@@ -293,13 +292,7 @@ function CompanyRow({ c, onOpen }: { c: Company; onOpen: () => void }) {
   );
 }
 
-function PanelShell({
-  onClose,
-  children,
-}: {
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
+function PanelShell({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-foreground/10 backdrop-blur-sm"
@@ -321,13 +314,7 @@ function PanelShell({
   );
 }
 
-function FounderPanel({
-  founder,
-  onClose,
-}: {
-  founder: Founder;
-  onClose: () => void;
-}) {
+function FounderPanel({ founder, onClose }: { founder: Founder; onClose: () => void }) {
   const chartData = founder.score_history.map((p) => ({
     date: new Date(p.computed_at).toLocaleDateString(undefined, {
       month: "short",
@@ -336,13 +323,10 @@ function FounderPanel({
     score: p.score,
   }));
 
-  const bySource = founder.data_points.reduce<Record<string, DataPoint[]>>(
-    (acc, d) => {
-      (acc[d.source_name] ||= []).push(d);
-      return acc;
-    },
-    {},
-  );
+  const bySource = founder.data_points.reduce<Record<string, DataPoint[]>>((acc, d) => {
+    (acc[d.source_name] ||= []).push(d);
+    return acc;
+  }, {});
 
   return (
     <PanelShell onClose={onClose}>
@@ -417,9 +401,7 @@ function FounderPanel({
           Evidence
         </h4>
         {Object.keys(bySource).length === 0 && (
-          <p className="text-xs italic text-muted-foreground">
-            No data points recorded.
-          </p>
+          <p className="text-xs italic text-muted-foreground">No data points recorded.</p>
         )}
         <div className="flex flex-col gap-3">
           {Object.entries(bySource).map(([source, points]) => (
@@ -445,17 +427,13 @@ function FounderPanel({
                       </td>
                       <td className="px-3 py-1.5">{d.value}</td>
                       <td className="px-3 py-1.5 tabular">
-                        {d.confidence_score !== null
-                          ? d.confidence_score.toFixed(2)
-                          : "—"}
+                        {d.confidence_score !== null ? d.confidence_score.toFixed(2) : "—"}
                       </td>
                       <td className="px-3 py-1.5">
                         <ConfidenceTierBadge tier={d.confidence_tier} />
                       </td>
                       <td className="px-3 py-1.5 tabular text-[10px] text-muted-foreground">
-                        {d.observed_at
-                          ? new Date(d.observed_at).toLocaleDateString()
-                          : "—"}
+                        {d.observed_at ? new Date(d.observed_at).toLocaleDateString() : "—"}
                       </td>
                     </tr>
                   ))}
@@ -506,13 +484,7 @@ function FounderPanel({
   );
 }
 
-function CompanyPanel({
-  company,
-  onClose,
-}: {
-  company: Company;
-  onClose: () => void;
-}) {
+function CompanyPanel({ company, onClose }: { company: Company; onClose: () => void }) {
   return (
     <PanelShell onClose={onClose}>
       <h3 className="text-xl font-semibold">{company.canonical_name}</h3>
@@ -573,13 +545,7 @@ function CompanyPanel({
   );
 }
 
-function CategoryRow({
-  c,
-  dataPoints,
-}: {
-  c: CategoryCoverage;
-  dataPoints: DataPoint[];
-}) {
+function CategoryRow({ c, dataPoints }: { c: CategoryCoverage; dataPoints: DataPoint[] }) {
   const label = c.category.replace(/_/g, " ");
   return (
     <div
@@ -598,10 +564,7 @@ function CategoryRow({
           {c.attribute_names.map((a) => {
             const dp = dataPoints.find((d) => d.attribute_name === a);
             return (
-              <div
-                key={a}
-                className="flex items-baseline justify-between text-xs"
-              >
+              <div key={a} className="flex items-baseline justify-between text-xs">
                 <span className="font-mono text-muted-foreground">{a}</span>
                 <span>{dp ? dp.value : "—"}</span>
               </div>

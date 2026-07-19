@@ -4,9 +4,11 @@ __pycache__/
 data/*.db
 data/incoming/*/
 data/processed/*/
+data/decks/
 !data/incoming/.gitkeep
 !data/processed/.gitkeep
 .env
 .env.*
 !.env.example
 .DS_Store
+.venv/

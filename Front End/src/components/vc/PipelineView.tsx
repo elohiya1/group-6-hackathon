@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { client, type Opportunity, type Thesis } from "@/api/client";
+import { client, ApiError, type Opportunity, type Thesis } from "@/api/client";
 import {
   AxisChip,
   FounderScoreCell,
@@ -10,41 +10,37 @@ import {
   VerdictBadge,
 } from "@/components/vc/primitives";
 import { Search } from "lucide-react";
+import { toast } from "sonner";
 import pipelineBanner from "@/assets/pipeline-banner.png.asset.json";
-
 
 type SearchResult = { opportunity: Opportunity; matched_attributes: string[] };
 
-export function PipelineView({
-  onOpen,
-}: {
-  onOpen: (id: number) => void;
-}) {
+export function PipelineView({ onOpen }: { onOpen: (id: number) => void }) {
   const [ops, setOps] = useState<Opportunity[]>([]);
   const [thesis, setThesis] = useState<Thesis | null>(null);
-  const [originFilter, setOriginFilter] = useState<"all" | "inbound" | "outbound">(
-    "all",
-  );
-  const [statusFilter, setStatusFilter] = useState<"all" | Opportunity["status"]>(
-    "all",
-  );
+  const [originFilter, setOriginFilter] = useState<"all" | "inbound" | "outbound">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | Opportunity["status"]>("all");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   // Stagger the very first render only; further filter/search changes never re-animate.
   const firstLoadRef = useRef(true);
 
-
   useEffect(() => {
     let alive = true;
-    Promise.all([client.listOpportunities(), client.getThesis()]).then(
-      ([o, t]) => {
+    Promise.all([client.listOpportunities(), client.getThesis()])
+      .then(([o, t]) => {
         if (!alive) return;
         setOps(o);
         setThesis(t);
         setLoading(false);
-      },
-    );
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof ApiError ? e.message : "Failed to load the pipeline.");
+        setLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -61,16 +57,20 @@ export function PipelineView({
     }
   }, [loading]);
 
-
   useEffect(() => {
     if (!query.trim()) {
       setResults(null);
       return;
     }
     let alive = true;
-    client.searchOpportunities(query).then((r) => {
-      if (alive) setResults(r);
-    });
+    client
+      .searchOpportunities(query)
+      .then((r) => {
+        if (alive) setResults(r);
+      })
+      .catch((e) => {
+        if (alive) toast.error(e instanceof ApiError ? e.message : "Search failed.");
+      });
     return () => {
       alive = false;
     };
@@ -109,10 +109,7 @@ export function PipelineView({
   return (
     <div className="flex flex-col gap-6">
       {/* Banner strip — collage screened back so table headers below stay legible. */}
-      <div
-        aria-hidden
-        className="relative -mx-8 -mt-8 mb-2 h-[110px] overflow-hidden border-b"
-      >
+      <div aria-hidden className="relative -mx-8 -mt-8 mb-2 h-[110px] overflow-hidden border-b">
         <div
           className="absolute inset-0 bg-cover bg-[position:center_55%] bg-no-repeat"
           style={{ backgroundImage: `url(${pipelineBanner.url})` }}
@@ -121,8 +118,7 @@ export function PipelineView({
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "color-mix(in oklab, var(--bg-paper) 76%, transparent)",
+            background: "color-mix(in oklab, var(--bg-paper) 76%, transparent)",
           }}
         />
       </div>
@@ -136,7 +132,6 @@ export function PipelineView({
         </div>
         {thesis && <ThesisChipRow thesis={thesis} />}
       </header>
-
 
       {/* Search + filters */}
       <div className="flex flex-wrap items-center gap-3">
@@ -203,145 +198,144 @@ export function PipelineView({
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && error && (
+              <tr>
+                <td colSpan={13} className="py-6 text-center text-bear">
+                  {error}
+                </td>
+              </tr>
+            )}
+            {!loading && !error && filtered.length === 0 && (
               <tr>
                 <td colSpan={13} className="py-6 text-center text-muted-foreground">
                   No opportunities match these filters.
                 </td>
               </tr>
             )}
-            {filtered.map((o, idx) => {
-              const hours = Math.round(
-                (Date.now() - new Date(o.first_signal_at).getTime()) / 3600_000,
-              );
-              const founderAxis = o.axes?.find((a) => a.axis === "founder");
-              const marketAxis = o.axes?.find((a) => a.axis === "market");
-              const ideaAxis = o.axes?.find((a) => a.axis === "idea_vs_market");
-              const matches = matchedMap.get(o.application_id);
-              const stagger = firstLoadRef.current;
-              return (
-                <>
-                  <tr
-                    key={o.application_id}
-                    onClick={() => onOpen(o.application_id)}
-                    className={`cursor-pointer border-t hover:bg-accent/40 ${
-                      stagger ? "motion-row" : ""
-                    }`}
-                    style={
-                      stagger
-                        ? { animationDelay: `${Math.min(idx, 9) * 30}ms` }
-                        : undefined
-                    }
-                  >
-
-                    <Td>
-                      <span className="tabular text-muted-foreground">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                    </Td>
-                    <Td>
-                      <span className="font-medium text-foreground">
-                        {o.company_name}
-                      </span>
-                      {o.status === "screened_fail" && o.screen_reason && (
-                        <div className="mt-0.5 text-[10px] text-bear">
-                          {o.screen_reason}
-                        </div>
-                      )}
-                    </Td>
-                    <Td>
-                      {o.founder ? (
-                        <span>{o.founder.canonical_name}</span>
-                      ) : (
-                        <span className="inline-flex rounded-sm border border-dashed border-flag/40 bg-flag-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-flag">
-                          Unresolved
+            {!error &&
+              filtered.map((o, idx) => {
+                const hours = Math.round(
+                  (Date.now() - new Date(o.first_signal_at).getTime()) / 3600_000,
+                );
+                const founderAxis = o.axes?.find((a) => a.axis === "founder");
+                const marketAxis = o.axes?.find((a) => a.axis === "market");
+                const ideaAxis = o.axes?.find((a) => a.axis === "idea_vs_market");
+                const matches = matchedMap.get(o.application_id);
+                const stagger = firstLoadRef.current;
+                return (
+                  <>
+                    <tr
+                      key={o.application_id}
+                      onClick={() => onOpen(o.application_id)}
+                      className={`cursor-pointer border-t hover:bg-accent/40 ${
+                        stagger ? "motion-row" : ""
+                      }`}
+                      style={stagger ? { animationDelay: `${Math.min(idx, 9) * 30}ms` } : undefined}
+                    >
+                      <Td>
+                        <span className="tabular text-muted-foreground">
+                          {String(idx + 1).padStart(2, "0")}
                         </span>
-                      )}
-                    </Td>
-                    <Td>
-                      <OriginBadge origin={o.origin} />
-                    </Td>
-                    <Td>
-                      {founderAxis ? (
-                        <AxisChip
-                          label="F"
-                          score={founderAxis.score}
-                          rating={founderAxis.rating}
-                          trend={founderAxis.trend}
-                        />
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>
-                      {marketAxis ? (
-                        <AxisChip
-                          label="M"
-                          score={marketAxis.score}
-                          rating={marketAxis.rating}
-                          trend={marketAxis.trend}
-                        />
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>
-                      {ideaAxis ? (
-                        <AxisChip
-                          label="I×M"
-                          score={ideaAxis.score}
-                          rating={ideaAxis.rating}
-                          trend={ideaAxis.trend}
-                        />
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>
-                      {o.founder ? (
-                        <FounderScoreCell
-                          score={o.founder.founder_score?.score ?? null}
-                          coverage={o.founder.founder_score?.coverage ?? null}
-                          history={o.founder.score_history.map((p) => p.score)}
-                        />
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>
-                      <TrustFlagBadge count={o.trust_flags_open} />
-                    </Td>
-                    <Td>
-                      <InThesisBadge inThesis={o.thesis_fit?.in_thesis ?? null} />
-                    </Td>
-                    <Td>
-                      <VerdictBadge verdict={o.recommendation?.verdict ?? null} compact />
-                    </Td>
-                    <Td>
-                      <span className="tabular text-muted-foreground">{hours}h</span>
-                    </Td>
-                    <Td>
-                      <StatusBadge status={o.status} />
-                    </Td>
-                  </tr>
-                  {matches && matches.length > 0 && (
-                    <tr className="border-t border-dashed bg-primary/[0.03]">
-                      <td colSpan={13} className="px-3 py-1.5 text-[10px]">
-                        <span className="text-muted-foreground">Matched:</span>{" "}
-                        {matches.map((m) => (
-                          <span
-                            key={m}
-                            className="ml-1 inline-flex rounded-sm border border-primary/25 bg-primary/5 px-1.5 py-0.5 font-mono text-primary"
-                          >
-                            {m}
+                      </Td>
+                      <Td>
+                        <span className="font-medium text-foreground">{o.company_name}</span>
+                        {o.status === "screened_fail" && o.screen_reason && (
+                          <div className="mt-0.5 text-[10px] text-bear">{o.screen_reason}</div>
+                        )}
+                      </Td>
+                      <Td>
+                        {o.founder ? (
+                          <span>{o.founder.canonical_name}</span>
+                        ) : (
+                          <span className="inline-flex rounded-sm border border-dashed border-flag/40 bg-flag-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-flag">
+                            Unresolved
                           </span>
-                        ))}
-                      </td>
+                        )}
+                      </Td>
+                      <Td>
+                        <OriginBadge origin={o.origin} />
+                      </Td>
+                      <Td>
+                        {founderAxis ? (
+                          <AxisChip
+                            label="F"
+                            score={founderAxis.score}
+                            rating={founderAxis.rating}
+                            trend={founderAxis.trend}
+                          />
+                        ) : (
+                          <Dash />
+                        )}
+                      </Td>
+                      <Td>
+                        {marketAxis ? (
+                          <AxisChip
+                            label="M"
+                            score={marketAxis.score}
+                            rating={marketAxis.rating}
+                            trend={marketAxis.trend}
+                          />
+                        ) : (
+                          <Dash />
+                        )}
+                      </Td>
+                      <Td>
+                        {ideaAxis ? (
+                          <AxisChip
+                            label="I×M"
+                            score={ideaAxis.score}
+                            rating={ideaAxis.rating}
+                            trend={ideaAxis.trend}
+                          />
+                        ) : (
+                          <Dash />
+                        )}
+                      </Td>
+                      <Td>
+                        {o.founder ? (
+                          <FounderScoreCell
+                            score={o.founder.founder_score?.score ?? null}
+                            coverage={o.founder.founder_score?.coverage ?? null}
+                            history={o.founder.score_history.map((p) => p.score)}
+                          />
+                        ) : (
+                          <Dash />
+                        )}
+                      </Td>
+                      <Td>
+                        <TrustFlagBadge count={o.trust_flags_open} />
+                      </Td>
+                      <Td>
+                        <InThesisBadge inThesis={o.thesis_fit?.in_thesis ?? null} />
+                      </Td>
+                      <Td>
+                        <VerdictBadge verdict={o.recommendation?.verdict ?? null} compact />
+                      </Td>
+                      <Td>
+                        <span className="tabular text-muted-foreground">{hours}h</span>
+                      </Td>
+                      <Td>
+                        <StatusBadge status={o.status} />
+                      </Td>
                     </tr>
-                  )}
-                </>
-              );
-            })}
+                    {matches && matches.length > 0 && (
+                      <tr className="border-t border-dashed bg-primary/[0.03]">
+                        <td colSpan={13} className="px-3 py-1.5 text-[10px]">
+                          <span className="text-muted-foreground">Matched:</span>{" "}
+                          {matches.map((m) => (
+                            <span
+                              key={m}
+                              className="ml-1 inline-flex rounded-sm border border-primary/25 bg-primary/5 px-1.5 py-0.5 font-mono text-primary"
+                            >
+                              {m}
+                            </span>
+                          ))}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
           </tbody>
         </table>
       </div>

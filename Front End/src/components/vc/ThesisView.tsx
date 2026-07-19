@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { client, type Thesis } from "@/api/client";
+import { client, ApiError, type Thesis } from "@/api/client";
 import { toast } from "sonner";
 
 const SECTOR_OPTIONS = [
@@ -19,23 +19,32 @@ const RISK_OPTIONS = ["Low", "Medium", "High"];
 export function ThesisView({ onSaved }: { onSaved: () => void }) {
   const [t, setT] = useState<Thesis | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    client.getThesis().then(setT);
+    client
+      .getThesis()
+      .then(setT)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load thesis."));
   }, []);
 
-  if (!t)
-    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (error) return <div className="p-8 text-sm text-bear">{error}</div>;
+  if (!t) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!t) return;
     setSaving(true);
-    const saved = await client.saveThesis(t);
-    setT(saved);
-    setSaving(false);
-    toast.success("All scoring now filtered through this thesis");
-    onSaved();
+    try {
+      const saved = await client.saveThesis(t);
+      setT(saved);
+      toast.success("All scoring now filtered through this thesis");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Failed to save thesis.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const toggle = (arr: string[], v: string) =>
@@ -114,9 +123,7 @@ export function ThesisView({ onSaved }: { onSaved: () => void }) {
             type="number"
             step="0.5"
             value={t.ownership_target_pct}
-            onChange={(e) =>
-              setT({ ...t, ownership_target_pct: Number(e.target.value) })
-            }
+            onChange={(e) => setT({ ...t, ownership_target_pct: Number(e.target.value) })}
             className="w-full rounded-md border bg-background px-2.5 py-1.5 text-sm tabular outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           />
         </Group>
