@@ -1,0 +1,265 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Playfair Display", "Zilla Slab", ui-serif, Georgia, serif;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-bullish: var(--bullish);
+  --color-bear: var(--bear);
+  --color-neutral: var(--neutral);
+  --color-flag: var(--flag);
+  --color-flag-bg: var(--flag-bg);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 4px;
+
+  /* Vintage financial print palette */
+  --bg-paper: #F2EAD3;
+  --bg-card: #FAF6E9;
+  --ink: #2B2B28;
+  --ink-muted: #6E6A5E;
+  --accent-green: #2E5D3A;
+  --signal-red: #D6402D;
+  --neutral-tone: #8A8676;
+  --amber-flag: #B98A2F;
+  --amber-flag-bg: #F1E6C6;
+  --chart-line: #D6402D;
+  --rule: #D8D0B8;
+
+  --background: var(--bg-paper);
+  --foreground: var(--ink);
+
+  --card: var(--bg-card);
+  --card-foreground: var(--ink);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--ink);
+
+  --primary: var(--accent-green);
+  --primary-foreground: #FAF6E9;
+
+  --secondary: #EDE4C8;
+  --secondary-foreground: var(--ink);
+
+  --muted: #EDE4C8;
+  --muted-foreground: var(--ink-muted);
+
+  --accent: #E6DDBF;
+  --accent-foreground: var(--accent-green);
+
+  --destructive: var(--signal-red);
+  --destructive-foreground: #FAF6E9;
+
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--accent-green);
+
+  /* Semantic rating colors */
+  --bullish: var(--accent-green);
+  --bear: var(--signal-red);
+  --neutral: var(--neutral-tone);
+
+  --flag: var(--amber-flag);
+  --flag-bg: var(--amber-flag-bg);
+
+  --sidebar: #ECE3C6;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--accent-green);
+  --sidebar-primary-foreground: #FAF6E9;
+  --sidebar-accent: #E1D6B4;
+  --sidebar-accent-foreground: var(--accent-green);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--accent-green);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    /* Subtle paper grain */
+    background-image:
+      radial-gradient(rgba(43, 43, 40, 0.05) 1px, transparent 1px),
+      radial-gradient(rgba(43, 43, 40, 0.035) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 2px;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .font-mono,
+  .tabular,
+  code, kbd, samp, pre {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  input, textarea, select, button {
+    font-family: inherit;
+  }
+  ::selection {
+    background: var(--accent-green);
+    color: #FAF6E9;
+  }
+}
+
+/* Decorative textures — only applied via explicit utility classes */
+@utility texture-paper {
+  background-color: var(--bg-paper);
+  background-image:
+    radial-gradient(rgba(43, 43, 40, 0.06) 1px, transparent 1px),
+    radial-gradient(rgba(43, 43, 40, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+}
+
+@utility halftone-dots {
+  background-image: radial-gradient(var(--accent-green) 1.1px, transparent 1.4px);
+  background-size: 8px 8px;
+  opacity: 0.35;
+}
+
+@utility ticker-trendline {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 300' preserveAspectRatio='none'><polyline fill='none' stroke='%23D6402D' stroke-width='1.5' points='0,240 40,220 80,235 130,180 180,205 230,150 280,175 330,120 380,140 430,95 480,115 540,70 600,90 660,50 720,75 800,40'/></svg>");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+@utility stamp {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+@utility label-caps {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+/* ============================================================
+   Motion system — subtle, consistent, and reduced-motion aware.
+   ============================================================ */
+:root {
+  --motion-fast: 120ms;
+  --motion-med: 200ms;
+  --motion-num: 500ms;
+  --motion-draw: 600ms;
+  --motion-pop: 250ms;
+  --motion-drift: 60s;
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+
+@keyframes motion-view-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes motion-row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes motion-pop-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes motion-drift {
+  from { transform: scale(1); }
+  to   { transform: scale(1.04); }
+}
+@keyframes motion-collapse {
+  from { opacity: 1; max-height: 800px; }
+  to   { opacity: 0; max-height: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+}
+
+@utility motion-view {
+  animation: motion-view-in var(--motion-med) var(--ease-out) both;
+}
+@utility motion-row {
+  animation: motion-row-in var(--motion-med) var(--ease-out) both;
+}
+@utility motion-pop {
+  animation: motion-pop-in var(--motion-pop) var(--ease-out) both;
+}
+@utility motion-drift {
+  animation: motion-drift var(--motion-drift) ease-in-out infinite alternate;
+  transform-origin: center;
+  will-change: transform;
+}
+@utility motion-collapse {
+  animation: motion-collapse var(--motion-med) var(--ease-out) forwards;
+  overflow: hidden;
+}
+
+/* Hover polish — background/border transitions on interactive elements */
+button, a, tr, .chip-hover {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
