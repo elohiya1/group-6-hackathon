@@ -4,6 +4,15 @@
 
 Built for the **Hack-Nation 6th Global AI Hackathon** — Challenge 02, powered by **Maschmeyer Group** ("Investing in Exceptional Founders"), in collaboration with the MIT Club of Northern California and the MIT Club of Germany.
 
+## 🔗 Live Deployment
+
+- **App:** https://vc-brain-frontend.vercel.app
+- **API:** https://vc-brain-backend-production.up.railway.app (interactive docs at `/docs`)
+
+Frontend is deployed on Vercel; the FastAPI backend runs on Railway with a
+persistent volume backing the SQLite database, so submitted applications and
+sourced signals survive restarts/redeploys.
+
 ---
 
 ## 🎯 The Problem
@@ -297,6 +306,19 @@ npx tsc --noEmit
 npm run lint
 npm run build
 ```
+
+### Deployment
+
+- **Frontend → Vercel:** `cd "Front End" && vercel deploy --prod`. Nitro
+  auto-detects the Vercel target at build time (no config needed). Backend
+  base URL is set via the `VITE_API_BASE_URL` production env var in the
+  Vercel project.
+- **Backend → Railway:** `railway up`, configured by `railway.json` at the
+  repo root (`uvicorn api.main:app --host 0.0.0.0 --port $PORT`). A
+  persistent volume is mounted at `/app/data` so `data/vc_brain.db` and
+  uploaded decks survive redeploys. Set the same keys from the `.env` table
+  above via `railway variable set`, plus `CORS_ORIGINS` pointing at the
+  Vercel domain.
 
 ## 🧭 Scope
 
